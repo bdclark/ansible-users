@@ -1,0 +1,40 @@
+---
+- hosts: test-kitchen
+  remote_user: root
+  vars:
+    users_list:
+      - name: user1
+        groups:
+          - users
+        authorized_keys:
+          - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDbYmAVC3HwwWmLgGe7/YIVS1EHoBeG70jKl8tNY8GCswrrEVS1cEViYCAhCMFhdc5MvH99CpQBVmy6w/77r1c2H7AyvjDkXGvoNlKO4+DiIwHYv+L2kC9fxE+N2uIuFOWhLcIVelxro0LKhVEKlDLQ0yafG/euFTsyg4DGGZtvrIN768NZFo0DWlf3lrbeT3JlKIZ5Qr1FNk2o4XIYRh4aAbNlCFSJSkbXYXcnibhGI8Keg8ShSB9ofNEyvoGE9Cstq8llHAZFJpbZOCxSea9ii+ua/pj4lkHItjtHweA6klMgI4Fzy57ni4tCl0Sjlmg5NkIROfit2q/dwwDwc3vx brian@ClarkBookPro.local
+          - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7ezT4QbxReoas9bvsQcHTTTwrL29Hp7S+2HdeWnYpiz+NNvDCdCFAQmroLfGevuMLgdlsBIqzE+SqePXIvH8J37EGsGD472yORmN7n+DaO6FX0xZzkY4a9d5weFsz/fmIPq0SUgdx4SmGDmrP++EMU0WplLOHAac9d0NTTdJiUjWzBD0xt4Wt4+cjhJKoNGX7LCo0c/bdtbc3sk3ZFeDj/6CXrztU5ScmL5dBT1l8CUdFWV6bnXM5hOHIOnqRhAr7QhOrzKo+c4+TKnA66B2nrs+OrwucaaOpOGUsRgVifyeWowLhH/ns8fcRF5PFjOT5QfIeyR6WHgpvDJWnY8Cl brian@ClarkBookPro.local
+      - name: user2
+        group: user2group
+        groups:
+          - users
+        comment: Joe User
+      - name: developer1
+        groups:
+          - devs
+          - users
+        createhome: false
+        home: /dev/null
+      - name: developer2
+        groups:
+          - devs
+        home: /opt/developer2
+        shell: /bin/false
+        # move_home: yes
+      - name: badguy
+        groups:
+          - users
+        state: absent
+
+  roles:
+    - role: users
+      users_group: users
+    - role: users
+      users_group: developers
+      users_search_group: devs
+      users_gid: 777

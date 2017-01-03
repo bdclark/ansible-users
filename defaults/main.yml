@@ -1,0 +1,8 @@
+---
+users_list: []
+
+users_group: ~
+users_search_group: "{{ users_group }}"
+users_state: synced
+
+users_default_shell: /bin/bash

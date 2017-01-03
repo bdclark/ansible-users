@@ -1,0 +1,78 @@
+---
+- assert:
+    that: users_group | default(None) != None
+    msg: users_group must be specified
+
+- assert:
+    that: users_state in ['present', 'absent', 'synced']
+    msg: users_state must be specified
+
+
+- name: select users
+  set_fact:
+    users_present: "{{ users_list | selectattr('groups', 'defined') | selectattr('groups', 'contains', users_search_group) | rejectattr('state', 'defined_and_equalto', 'absent') | list }}"
+    users_absent:  "{{ users_list | selectattr('groups', 'defined') | selectattr('groups', 'contains', users_search_group) | selectattr('state', 'defined_and_equalto', 'absent') | list }}"
+
+
+- block:
+  - name: get list of existing groups
+    getent:
+      database: group
+
+  - name: manage user groups
+    group:
+      name: "{{ item.group | default(item.name) }}"
+      gid: "{{ item.gid | default(omit) }}"
+      state: present
+    with_flattened:
+      - name: "{{ users_group }}"
+        gid: "{{ users_gid | default(omit) }}"
+      - "{{ users_present }}"
+    when: item.name is defined and item.name and item.name != 'root'
+
+  - name: manage present user accounts
+    user:
+      name: "{{ item.name }}"
+      uid: "{{ item.uid | default(omit) }}"
+      group: "{{ item.group | default(item.name) }}"
+      groups: "{{ [item.groups] if item.groups is string else item.groups | union([users_group]) | intersect(getent_group.keys()) | join(',') }}"
+      state: "{{ item.state | default('present') }}"
+      comment: "{{ item.comment | default(omit) }}"
+      password: "{{ item.password | default(omit) }}"
+      system: "{{ item.system | default(omit) }}"
+      shell: "{{ item.shell | default(users_default_shell) }}"
+      home: "{{ item.home | default(omit) }}"
+      createhome: "{{ item.createhome | default(omit) }}"
+      move_home: "{{ item.move_home | default(omit) }}"
+      skeleton: "{{ item.skeleton | default(omit) }}"
+      expires: "{{ item.expires | default(omit) }}"
+      remove: "{{ item.remove | default(omit) }}"
+      force: "{{ item.force | default(omit) }}"
+      generate_ssh_key: "{{ item.generate_ssh_key | default(omit) }}"
+      ssh_key_bits: "{{ item.ssh_key_bits | default(omit) }}"
+      ssh_key_comment: "{{ item.ssh_key_comment | default(omit) }}"
+      ssh_key_file: "{{ item.ssh_key_file | default(omit) }}"
+      ssh_key_passphrase: "{{ item.ssh_key_passphrase | default(omit) }}"
+      ssh_key_type: "{{ item.ssh_key_type | default(omit) }}"
+    with_items: "{{ users_present }}"
+    when: item.name is defined and item.name and item.name != 'root'
+
+  - name: manage authorized_keys
+    authorized_key:
+      key: "{{ item.authorized_keys | default([]) | join('\n') if item.authorized_keys is defined else '' }}"
+      state: present
+      user: "{{ item.name }}"
+      exclusive: "{{ item.authorized_keys is defined and item.authorized_keys | length == 0 }}"
+    with_items: "{{ users_present }}"
+    when: item.name is defined and item.name and (item.createhome is undefined or item.createhome)
+
+  when: users_state != 'absent'
+
+
+- name: manage absent user accounts
+  user:
+    name: "{{ item.name }}"
+    state: absent
+  with_items:
+    - "{{ users_absent }}"
+  when:  users_state != 'present' and item.name is defined and item.name and item.name != 'root'
