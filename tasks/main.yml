@@ -76,3 +76,19 @@
   with_items:
     - "{{ users_absent }}"
   when:  users_state != 'present' and item.name is defined and item.name and item.name != 'root'
+
+- name: manage sudoers
+  template:
+    src: sudoers.j2
+    dest: /etc/sudoers.d/ansible_users-{{ users_group + ('_' + users_search_group if users_search_group != users_group else '') }}
+    validate: visudo -cf %s
+    owner: root
+    group: root
+    mode: 0440
+  when: users_state != 'absent' and users_sudo
+
+- name: remove sudoers
+  file:
+    path:  /etc/sudoers.d/ansible_users-{{ users_group + ('_' + users_search_group if users_search_group != users_group else '') }}
+    state: absent
+  when: users_state == 'absent' or (users_state != 'absent' and not users_sudo)

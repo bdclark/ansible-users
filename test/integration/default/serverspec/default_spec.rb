@@ -9,6 +9,11 @@ describe group('developers') do
   it { should have_gid 777 }
 end
 
+describe group('sysadmin') do
+  it { should exist }
+  it { should have_gid 2300 }
+end
+
 describe user('user1') do
   it { should belong_to_primary_group 'user1' }
   it { should belong_to_group 'users' }
@@ -43,4 +48,29 @@ end
 
 describe user('badguy') do
   it { should_not exist }
+end
+
+describe user('superadmin') do
+  it { should belong_to_primary_group 'superadmin' }
+  it { should belong_to_group 'sysadmin' }
+  it { should have_login_shell '/bin/bash' }
+  it { should have_home_directory '/home/superadmin' }
+end
+
+describe file('/etc/sudoers.d/ansible_users-developers_devs') do
+  it { should be_file }
+  it { should be_owned_by 'root' }
+  it { should be_mode '440' }
+  it { should contain '%developers ALL=(ALL) NOPASSWD: /bin/ls' }
+end
+
+describe file('/etc/sudoers.d/ansible_users-sysadmin') do
+  it { should be_file }
+  it { should be_owned_by 'root' }
+  it { should be_mode '440' }
+  it { should contain '%sysadmin ALL=(ALL) NOPASSWD: ALL' }
+end
+
+describe file('/etc/sudoers.d/ansible_users-users') do
+  it { should_not be_file }
 end

@@ -25,11 +25,13 @@
           - devs
         home: /opt/developer2
         shell: /bin/false
-        # move_home: yes
       - name: badguy
         groups:
           - users
         state: absent
+      - name: superadmin
+        groups:
+          - sysadmin
 
   roles:
     - role: users
@@ -38,3 +40,10 @@
       users_group: developers
       users_search_group: devs
       users_gid: 777
+      users_sudo:
+        commands: /bin/ls
+        nopasswd: yes
+    - role: users
+      users_group: sysadmin
+      users_gid: 2300
+      users_sudo: nopasswd
