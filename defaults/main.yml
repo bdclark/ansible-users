@@ -1,9 +1,5 @@
 ---
-users_list: []
+user_list: []
+user_groups: []
 
-users_group: ~
-users_search_group: "{{ users_group }}"
-users_state: synced
-users_sudo: ~
-
-users_default_shell: /bin/bash
+user_default_shell: /bin/bash

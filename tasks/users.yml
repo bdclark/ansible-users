@@ -1,0 +1,85 @@
+---
+
+- name: select users
+  set_fact:
+    users_present: "{{ user_list | selectattr('groups', 'defined') | selectattr('groups', 'contains', group_item.search_name | default(group_item.name)) | rejectattr('state', 'defined_and_equalto', 'absent') | list }}"
+    users_absent:  "{{ user_list | selectattr('groups', 'defined') | selectattr('groups', 'contains', group_item.search_name | default(group_item.name)) | selectattr('state', 'defined_and_equalto', 'absent') | list }}"
+
+- block:
+  - name: manage user groups
+    group:
+      name: "{{ item.group | default(item.name) }}"
+      gid: "{{ item.gid | default(omit) }}"
+      state: present
+    with_flattened:
+      - name: "{{ group_item.name }}"
+        gid: "{{ group_item.gid | default(omit) }}"
+      - "{{ users_present }}"
+    when: item.name is defined and item.name and item.name != 'root'
+
+  - name: get list of existing groups
+    getent:
+      database: group
+
+  - name: manage present user accounts
+    user:
+      name: "{{ item.name }}"
+      uid: "{{ item.uid | default(omit) }}"
+      group: "{{ item.group | default(item.name) }}"
+      groups: "{{ [item.groups] if item.groups is string else item.groups | union([group_item.name]) | intersect(getent_group.keys()) | join(',') }}"
+      state: "{{ item.state | default('present') }}"
+      comment: "{{ item.comment | default(omit) }}"
+      password: "{{ item.password | default(omit) }}"
+      system: "{{ item.system | default(omit) }}"
+      shell: "{{ item.shell | default(user_default_shell) }}"
+      home: "{{ item.home | default(omit) }}"
+      createhome: "{{ item.createhome | default(omit) }}"
+      move_home: "{{ item.move_home | default(omit) }}"
+      skeleton: "{{ item.skeleton | default(omit) }}"
+      expires: "{{ item.expires | default(omit) }}"
+      remove: "{{ item.remove | default(omit) }}"
+      force: "{{ item.force | default(omit) }}"
+      generate_ssh_key: "{{ item.generate_ssh_key | default(omit) }}"
+      ssh_key_bits: "{{ item.ssh_key_bits | default(omit) }}"
+      ssh_key_comment: "{{ item.ssh_key_comment | default(omit) }}"
+      ssh_key_file: "{{ item.ssh_key_file | default(omit) }}"
+      ssh_key_passphrase: "{{ item.ssh_key_passphrase | default(omit) }}"
+      ssh_key_type: "{{ item.ssh_key_type | default(omit) }}"
+    with_items: "{{ users_present }}"
+    when: item.name is defined and item.name and item.name != 'root'
+
+  - name: manage authorized_keys
+    authorized_key:
+      key: "{{ item.authorized_keys | default([]) | join('\n') if item.authorized_keys is defined else '' }}"
+      state: present
+      user: "{{ item.name }}"
+      exclusive: "{{ item.authorized_keys is defined and item.authorized_keys | length == 0 }}"
+    with_items: "{{ users_present }}"
+    when: item.name is defined and item.name and (item.createhome is undefined or item.createhome)
+
+  when: group_item.state | default('synced') != 'absent'
+
+
+- name: manage absent user accounts
+  user:
+    name: "{{ item.name }}"
+    state: absent
+  with_items:
+    - "{{ users_absent }}"
+  when:  group_item.state | default('synced') != 'present' and item.name is defined and item.name and item.name != 'root'
+
+- name: manage sudoers
+  template:
+    src: sudoers.j2
+    dest: /etc/sudoers.d/ansible_users-{{ group_item.name + ('_' + group_item.search_name if group_item.search_name is defined and group_item.search_name != group_item.name else '') }}
+    validate: visudo -cf %s
+    owner: root
+    group: root
+    mode: 0440
+  when: group_item.state | default('synced') != 'absent' and group_item.sudo|d(None)
+
+- name: remove sudoers
+  file:
+    path:  /etc/sudoers.d/ansible_users-{{ group_item.name + ('_' +  group_item.search_name if group_item.search_name is defined and group_item.search_name != group_item.name else '') }}
+    state: absent
+  when: group_item.state | default('synced') == 'absent' or (group_item.state | default('synced') != 'absent' and not group_item.sudo|d(None))

@@ -1,11 +1,11 @@
 # This file managed by Ansible from users role. Changes will be overwritten.
 
-{% if users_sudo and users_state != 'absent' %}
-{% if users_sudo == 'nopasswd' %}
-%{{ users_group }} ALL=(ALL) NOPASSWD: ALL
-{% elif users_sudo | bool %}
-%{{ users_group }} ALL=(ALL) ALL
-{% elif users_sudo is mapping %}
-%{{ users_group }} {{ users_sudo.hosts | default('ALL') }}={{ "(" ~ users_sudo.users | default('ALL') ~ ")" }} {{ "NOPASSWD:" if users_sudo.nopasswd | default(false) else "" }} {{ users_sudo.commands | default('ALL') }}
+{% if group_item.sudo|d(None) and group_item.state | default('synced') != 'absent' %}
+{% if group_item.sudo == 'nopasswd' %}
+%{{ group_item.name }} ALL=(ALL) NOPASSWD: ALL
+{% elif group_item.sudo | bool %}
+%{{ group_item.name }} ALL=(ALL) ALL
+{% elif group_item.sudo is mapping %}
+%{{ group_item.name }} {{ group_item.sudo.hosts | default('ALL') }}={{ "(" ~ group_item.sudo.users | default('ALL') ~ ")" }} {{ "NOPASSWD:" if group_item.sudo.nopasswd | default(false) else "" }} {{ group_item.sudo.commands | default('ALL') }}
 {% endif %}
 {% endif %}

@@ -2,7 +2,7 @@
 - hosts: test-kitchen
   remote_user: root
   vars:
-    users_list:
+    user_list:
       - name: user1
         groups:
           - users
@@ -35,15 +35,14 @@
 
   roles:
     - role: users
-      users_group: users
-    - role: users
-      users_group: developers
-      users_search_group: devs
-      users_gid: 777
-      users_sudo:
-        commands: /bin/ls
-        nopasswd: yes
-    - role: users
-      users_group: sysadmin
-      users_gid: 2300
-      users_sudo: nopasswd
+      user_groups:
+        - name: users
+        - name: developers
+          search_name: devs
+          gid: 777
+          sudo:
+            commands: /bin/ls
+            nopasswd: yes
+        - name: sysadmin
+          gid: 2300
+          sudo: nopasswd
